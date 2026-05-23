@@ -1,0 +1,21 @@
+{
+  "name": "sabana-marketplace-backend-express",
+  "version": "1.0.0",
+  "description": "",
+  "main": "index.js",
+  "scripts": {
+    "test": "echo \"Error: no test specified\" && exit 1"
+  },
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/Jusselth/SABANA-MARKETPLACE-BACKEND-express.git"
+  },
+  "keywords": [],
+  "author": "",
+  "license": "ISC",
+  "type": "commonjs",
+  "bugs": {
+    "url": "https://github.com/Jusselth/SABANA-MARKETPLACE-BACKEND-express/issues"
+  },
+  "homepage": "https://github.com/Jusselth/SABANA-MARKETPLACE-BACKEND-express#readme"
+}
