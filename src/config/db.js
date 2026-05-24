@@ -37,7 +37,7 @@ function initData() {
         id: productIdCounter++,
         title: "Libro 100 años de soledad",
         price: 150000,
-        stock: 2,
+        stock: 1,
         category: "BOOKS",
         condition: "NEW",
         description: "Libro famoso escrito por Gabriel García Márquez",
