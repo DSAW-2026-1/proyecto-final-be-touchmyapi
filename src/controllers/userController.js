@@ -64,9 +64,36 @@ const toggleUserRole = (req, res) => {
 
     return res.json(user);
 };
+// 4. Restablecer contraseña de un usuario a la clave por defecto
+const resetUserPassword = (req, res) => {
+    const { email } = req.params;
+    const normalizedEmail = email.toLowerCase().trim();
+
+    if (normalizedEmail === 'jusselth@unisabana.edu.co') {
+        return res.status(403).send("¡Error! La contraseña del administrador principal está protegida y no puede ser restablecida.");
+    }
+
+    const user = users.get(normalizedEmail);
+
+    if (!user) {
+        return res.status(404).send("Usuario no encontrado");
+    }
+
+    user.password = '12345678';
+    
+    // Guardamos los cambios en el Map en memoria
+    users.set(normalizedEmail, user);
+
+    return res.status(200).json({ 
+        message: "Contraseña restablecida correctamente", 
+        email: user.email,
+        newPassword: user.password 
+    });
+};
 
 module.exports = {
     getAllUsers,
     deleteUser,
-    toggleUserRole
+    toggleUserRole,
+    resetUserPassword
 };

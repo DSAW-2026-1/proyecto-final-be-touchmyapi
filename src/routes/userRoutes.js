@@ -4,6 +4,7 @@ const userController = require('../controllers/userController');
 
 router.get('/', userController.getAllUsers);
 router.delete('/:email', userController.deleteUser);
-router.patch('/:email/toggle-role', userController.toggleUserRole); // patch para actualizaciones parciales
+router.patch('/:email/toggle-role', userController.toggleUserRole);
+router.patch('/:email/reset-password', userController.resetUserPassword);
 
 module.exports = router;
