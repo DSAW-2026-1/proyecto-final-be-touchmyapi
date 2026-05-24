@@ -20,16 +20,38 @@ function initData() {
     };
     users.set(admin.email.toLowerCase(), admin);
 
-    // Inicializar el Producto de Prueba por Defecto
+    // Inicializar Productos de Prueba por Defecto
     const p1 = {
         id: productIdCounter++,
         title: "Cargador tipo C",
-        price: 36000.0,
+        price: 36000,
         stock: 5,
         category: "Electrónica",
         condition: "NEW",
         description: "Cargador de carga rápida para dispositivos Android.",
-        imageUrl: "",
+        imageUrl: "https://media.falabella.com/falabellaCO/142354801_01/w=1500,h=1500,fit=cove",
+        ownerEmail: "prueba@unisabana.edu.co"
+    };
+    const p2 = {
+        id: productIdCounter++,
+        title: "Libro 100 años de soledad",
+        price: 150000,
+        stock: 2,
+        category: "Libros",
+        condition: "NEW",
+        description: "Libro famoso escrito por Gabriel García Márquez",
+        imageUrl: "https://blogger.googleusercontent.com/img/b/R29vZ2xl/AVvXsEjE3CPA_tuzhpPyTsBbLmmcHgVNmd62pMdRurl9jJDZcbrvbgdvqe3on1Lz0RO5zpLbguKh175MFA5H3vg-hicK3oxaftaYECyuwfF4-TT7J-BOueoxGhAf9DvzrFe0aIOS88nIcR6xEeRo7qzo4DMNQXIuEKlemMu3QDe1aoytIN9Zno3wNYJlJHaSCOU/s606/078-Cien%20a%C3%B1os%20de%20soledad-Gabriel%20Garc%C3%ADa%20M%C3%A1rquez.jpg",
+        ownerEmail: "prueba@unisabana.edu.co"
+    };
+    const p3 = {
+        id: productIdCounter++,
+        title: "Gomitas Trululú",
+        price: 12000,
+        stock: 3,
+        category: "Cómida",
+        condition: "NEW",
+        description: "Deliciosas gomitas para comer mientras comienza la clase.",
+        imageUrl: "https://http2.mlstatic.com/D_NQ_NP_875737-MCO95801924860_102025-O.webp",
         ownerEmail: "prueba@unisabana.edu.co"
     };
     products.push(p1);
