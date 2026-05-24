@@ -54,6 +54,20 @@ const createOrder = (req, res) => {
     return res.status(201).json(newOrder);
 };
 
+const getOrdersByUser = (req, res) => {
+    const { email } = req.params;
+    if (!email) {
+        return res.status(400).send("El email es requerido");
+    }
+    
+    const normalizedEmail = email.toLowerCase().trim();
+    // Filtramos las órdenes guardadas en el array global db por el correo del comprador
+    const userOrders = orders.filter(o => o.email && o.email.toLowerCase() === normalizedEmail);
+    
+    return res.json(userOrders);
+};
+
 module.exports = {
-    createOrder
+    createOrder,
+    getOrdersByUser
 };
