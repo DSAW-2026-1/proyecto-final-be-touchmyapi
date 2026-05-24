@@ -14,7 +14,7 @@ function initData() {
         name: "Jusselth",
         lastName: "Chica",
         email: "jusselth@unisabana.edu.co",
-        password: "admin123",
+        password: "$2b$10$7Z2.o9.KkM5Fp/4Ue4gW2eCshvR73WkXhOskw/g1G6bIomV2n1v/G",
         career: "Ingeniería de Sistemas",
         role: "ADMIN"
     };
