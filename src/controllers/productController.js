@@ -38,9 +38,13 @@ const createProduct = (req, res) => {
     products.push(newProduct);
     
     const user = users.get(normalizedEmail);
-    if (user && user.role === 'USER') {
-        user.role = 'SELLER';
-        users.set(normalizedEmail, user);
+
+    if (user) {
+        if (user.role === 'USER') {
+            user.role = 'SELLER';
+            users.set(normalizedEmail, user); 
+            console.log(`🚀 Usuario ${normalizedEmail} promovido a SELLER.`);
+        }
     }
 
     return res.status(201).json(newProduct);
