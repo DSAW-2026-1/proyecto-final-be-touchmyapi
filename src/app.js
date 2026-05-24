@@ -33,6 +33,9 @@ app.use(cors(corsOptions));
 app.use(express.json()); // Crucial para procesar los @RequestBody que manda React en JSON
 
 app.use('/api/v1/auth', require('./routes/authRoutes'));
+app.use('/api/v1/products', require('./routes/productRoutes'));
+app.use('/api/v1/users', require('./routes/userRoutes'));
+app.use('/api/v1/orders', require('./routes/orderRoutes'));
 
 // 3. Ruta de Control de Salud de la API (Health Check)
 app.get('/api/v1/health', (req, res) => {
