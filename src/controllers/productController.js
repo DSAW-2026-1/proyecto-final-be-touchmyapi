@@ -1,4 +1,4 @@
-const { products, users, generateNextProductId } = require('../config/db');
+const { products, users } = require('../config/db'); // 🌟 Extraemos solo lo que existe en tu db.js
 
 // 1. Obtener todos los productos 
 const getAllProducts = (req, res) => {
@@ -18,51 +18,55 @@ const getProductsByOwner = (req, res) => {
 const createProduct = (req, res) => {
     const { title, description, price, stock, category, condition, imageUrl, ownerEmail } = req.body;
 
-    // Validación básica
+    // Validación básica de campos obligatorios
     if (!title || !description || !price || !stock || !category || !condition || !ownerEmail) {
         return res.status(400).send("Faltan datos obligatorios.");
     }
 
+    const normalizedEmail = ownerEmail.toLowerCase().trim();
+
+    const nextId = products.length > 0 ? Math.max(...products.map(p => p.id)) + 1 : 1;
+
     const newProduct = {
-        id: generateNextProductId(), // Usa el contador incremental automático
+        id: nextId, 
         title,
         description: description || "",
         price: Number(price),
-        stock: stock !== undefined ? Number(stock) : 1, // por si acaso
+        stock: stock !== undefined ? Number(stock) : 1, 
         category: category,
         condition: condition,
         imageUrl: imageUrl || "",
-        ownerEmail: ownerEmail.toLowerCase().trim()
+        ownerEmail: normalizedEmail
     };
 
     products.push(newProduct);
-    
-    const user = users.get(normalizedEmail);
 
+    // COMPOSICIÓN DE ROL SEGURA
+    const user = users.get(normalizedEmail);
     if (user) {
         if (user.role === 'USER') {
             user.role = 'SELLER';
-            users.set(normalizedEmail, user); 
-            console.log(`Usuario ${normalizedEmail} promovido a SELLER.`);
+            users.set(normalizedEmail, user);
+            console.log(`🚀 Usuario ${normalizedEmail} promovido a SELLER por publicar.`);
         }
+    } else {
+        console.warn(`⚠️ El dueño ${normalizedEmail} no figura en el mapa de usuarios.`);
     }
 
     return res.status(201).json(newProduct);
 };
 
-// 4. Actualizar un producto
+// 4. Actualizar un producto existente
 const updateProduct = (req, res) => {
     const { id } = req.params;
     const { title, price, stock, category, description, imageUrl, condition } = req.body;
 
-    // Buscar el producto por ID 
     const product = products.find(p => p.id === Number(id));
 
     if (!product) {
         return res.status(404).send("Producto no encontrado");
     }
 
-    // Mapeamos los sets 
     product.title = title !== undefined ? title : product.title;
     product.price = price !== undefined ? Number(price) : product.price;
     product.stock = stock !== undefined ? Number(stock) : product.stock;
@@ -78,7 +82,6 @@ const updateProduct = (req, res) => {
 const deleteProduct = (req, res) => {
     const { id } = req.params;
     
-    // Buscamos la posición del producto en el array
     const index = products.findIndex(p => p.id === Number(id));
 
     if (index === -1) {
@@ -87,17 +90,16 @@ const deleteProduct = (req, res) => {
 
     const ownerEmail = products[index].ownerEmail?.toLowerCase().trim();
 
-    // Eliminamos del array en memoria
     products.splice(index, 1);
 
     if (ownerEmail) {
         const hasMoreProducts = products.some(p => p.ownerEmail && p.ownerEmail.toLowerCase() === ownerEmail);
         
-        // Si ya no publica nada y figuraba como SELLER, retorna a su estado base de USER
         const user = users.get(ownerEmail);
         if (user && user.role === 'SELLER' && !hasMoreProducts) {
             user.role = 'USER';
             users.set(ownerEmail, user);
+            console.log(`📉 Usuario ${ownerEmail} volvió a ser USER (sin publicaciones activas).`);
         }
     }
 
