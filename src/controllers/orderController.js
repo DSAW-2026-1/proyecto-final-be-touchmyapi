@@ -11,6 +11,9 @@ const createOrder = (req, res) => {
         return res.status(400).send("El carrito no puede estar vacío");
     }
 
+    // Normalizar el email a minúsculas para evitar fallos de Case Sensitivity
+    const normalizedEmail = email.toLowerCase().trim();
+
     // 2. Primera pasada: Validar existencia de productos y disponibilidad de Stock
     for (const item of items) {
         if (!item.productId) {
@@ -29,6 +32,17 @@ const createOrder = (req, res) => {
         }
     }
 
+    // 🌟 NUEVO: Enriquecer los items con el Título y Precio real del producto antes de guardar
+    const enrichedItems = items.map(item => {
+        const product = products.find(p => p.id === Number(item.productId));
+        return {
+            productId: Number(item.productId),
+            quantity: Number(item.quantity),
+            title: product.title,       // 👈 Agregamos el título real
+            price: Number(product.price) // 👈 Agregamos el precio real
+        };
+    });
+
     // 3. Segunda pasada: Si todo está perfecto, restamos el stock real del inventario
     for (const item of items) {
         const product = products.find(p => p.id === Number(item.productId));
@@ -37,15 +51,15 @@ const createOrder = (req, res) => {
         }
     }
 
-    // 4. Asignar ID incremental automático a la orden y guardarla en la lista de órdenes
+    // 4. Guardar la orden estructurada de manera impecable
     const newOrder = {
         id: generateNextOrderId(),
-        email,
+        email: normalizedEmail,
         address: address || "",
         city: city || "",
         paymentMethod: paymentMethod || "",
         totalAmount: Number(totalAmount) || 0.0,
-        items
+        items: enrichedItems // 🌟 Guardamos los ítems con toda su información mapeada
     };
 
     orders.push(newOrder);
@@ -61,7 +75,8 @@ const getOrdersByUser = (req, res) => {
     }
     
     const normalizedEmail = email.toLowerCase().trim();
-    // Filtramos las órdenes guardadas en el array global db por el correo del comprador
+    
+    // 🌟 CORREGIDO: Aseguramos el filtrado estricto en minúsculas en el array global db
     const userOrders = orders.filter(o => o.email && o.email.toLowerCase() === normalizedEmail);
     
     return res.json(userOrders);
