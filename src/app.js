@@ -12,8 +12,8 @@ const PORT = process.env.PORT || 8080;
 
 // 1. Configuración dinámica de CORS para aceptar Localhost y Railway al tiempo
 const whitelist = [
-  'http://localhost:5175',
-   process.env.FRONTEND_URL_PROD
+    process.env.FRONTEND_URL_LOCAL,
+    process.env.FRONTEND_URL_PROD
 ];
 
 const corsOptions = {
@@ -32,11 +32,13 @@ const corsOptions = {
 app.use(cors(corsOptions));
 app.use(express.json()); // Crucial para procesar los @RequestBody que manda React en JSON
 
+app.use('/api/v1/auth', require('./routes/authRoutes'));
+
 // 3. Ruta de Control de Salud de la API (Health Check)
 app.get('/api/v1/health', (req, res) => {
   res.json({ 
     status: "up", 
-    message: "Servidor Express del Marketplace de La Sabana corriendo fino en memoria" 
+    message: "Servidor Express del Marketplace de La Sabana corriendo en memoria" 
   });
 });
 
