@@ -36,6 +36,13 @@ const createProduct = (req, res) => {
     };
 
     products.push(newProduct);
+    
+    const user = users.get(normalizedEmail);
+    if (user && user.role === 'USER') {
+        user.role = 'SELLER';
+        users.set(normalizedEmail, user);
+    }
+
     return res.status(201).json(newProduct);
 };
 
@@ -74,8 +81,22 @@ const deleteProduct = (req, res) => {
         return res.status(404).send("Producto no encontrado");
     }
 
+    const ownerEmail = products[index].ownerEmail?.toLowerCase().trim();
+
     // Eliminamos del array en memoria
     products.splice(index, 1);
+
+    if (ownerEmail) {
+        const hasMoreProducts = products.some(p => p.ownerEmail && p.ownerEmail.toLowerCase() === ownerEmail);
+        
+        // Si ya no publica nada y figuraba como SELLER, retorna a su estado base de USER
+        const user = users.get(ownerEmail);
+        if (user && user.role === 'SELLER' && !hasMoreProducts) {
+            user.role = 'USER';
+            users.set(ownerEmail, user);
+        }
+    }
+
     return res.status(200).send("Producto eliminado con éxito");
 };
 
