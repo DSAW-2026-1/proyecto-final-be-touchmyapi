@@ -1,4 +1,4 @@
-const { products, generateNextProductId } = require('../config/db');
+const { products, users, generateNextProductId } = require('../config/db');
 
 // 1. Obtener todos los productos 
 const getAllProducts = (req, res) => {
@@ -43,7 +43,7 @@ const createProduct = (req, res) => {
         if (user.role === 'USER') {
             user.role = 'SELLER';
             users.set(normalizedEmail, user); 
-            console.log(`🚀 Usuario ${normalizedEmail} promovido a SELLER.`);
+            console.log(`Usuario ${normalizedEmail} promovido a SELLER.`);
         }
     }
 
