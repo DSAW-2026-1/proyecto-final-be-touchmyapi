@@ -15,23 +15,20 @@ const whitelist = [
     process.env.FRONTEND_URL_LOCAL,
     process.env.FRONTEND_URL_PROD
 ];
+app.use(cors()); // Permite acceso desde cualquier origen
+app.use(express.json());
 
-const corsOptions = {
-  origin: function (origin, callback) {
-    // Permite peticiones sin origen (como Postman) o si están en la lista blanca
-    if (!origin || whitelist.indexOf(origin) !== -1) {
-      callback(null, true);
-    } else {
-      callback(new Error('Bloqueado por políticas de CORS - Marketplace Sabana Backend'));
-    }
-  },
-  credentials: true
-};
+// Log de depuración: imprime cada petición que entra
+app.use((req, res, next) => {
+    console.log(`[DEBUG] Recibida: ${req.method} ${req.url}`);
+    next();
+});
 
-// 2. Middlewares Globales
-app.use(cors(corsOptions));
-app.use(express.json()); // Crucial para procesar los @RequestBody que manda React en JSON
 
+app.use((req, res, next) => {
+  console.log(`Recibida petición: ${req.method} ${req.url}`);
+  next();
+});
 app.use('/api/v1/auth', require('./routes/authRoutes'));
 app.use('/api/v1/products', require('./routes/productRoutes'));
 app.use('/api/v1/users', require('./routes/userRoutes'));
