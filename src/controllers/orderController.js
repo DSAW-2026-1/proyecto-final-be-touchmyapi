@@ -32,14 +32,15 @@ const createOrder = (req, res) => {
         }
     }
 
-    
+    // ✨ CORRECCIÓN AQUÍ: Guardamos el ownerEmail del producto dentro de la orden
     const enrichedItems = items.map(item => {
         const product = products.find(p => p.id === Number(item.productId));
         return {
             productId: Number(item.productId),
             quantity: Number(item.quantity),
             title: product.title,       
-            price: Number(product.price) 
+            price: Number(product.price),
+            ownerEmail: product.ownerEmail // 👈 ¡Bolas! Esto era lo que faltaba
         };
     });
 

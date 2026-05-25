@@ -2,6 +2,7 @@ const bcrypt = require('bcrypt');
 const users = new Map(); // El email será la llave única
 const products = [];     // Array para manejar la lista de productos
 const orders = [];       // Array para guardar los checkouts realizados
+const reviews = [];
 
 // 2. Generadores de IDs incrementales automáticos
 let productIdCounter = 1;
@@ -75,6 +76,7 @@ initData();
 
 // 4. métodos necesarios para que los controladores interactúen con la data
 module.exports = {
+    reviews,
     users,
     products,
     orders,
