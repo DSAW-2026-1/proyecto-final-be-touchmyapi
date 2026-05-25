@@ -128,16 +128,36 @@ const updateOrderStatus = (req, res) => {
         return res.status(404).send("La orden no existe");
     }
 
-    order.status = status;
+    // Normalizar el estado recibido a mayúsculas para evitar errores de tipeo
+    const normalizedStatus = status ? status.toUpperCase().trim() : '';
 
-    //Notificación cuando el producto cambia a "ENTREGADO"
-    if (status === 'ENTREGADO') {
-        const io = req.app.get('io');
+    // Validar que el estado enviado esté dentro del flujo permitido
+    const validStatuses = ['PENDING', 'READY_FOR_DELIVERY', 'DELIVERED', 'ENTREGADO'];
+    if (!validStatuses.includes(normalizedStatus)) {
+        return res.status(400).send("El estado proporcionado no es válido.");
+    }
 
+    // Asignar el nuevo estado a la orden en memoria/DB
+    order.status = normalizedStatus;
+
+    const io = req.app.get('io');
+
+    // CASO INTERMEDIO: El vendedor marca el producto como listo para recoger en el campus
+    if (normalizedStatus === 'READY_FOR_DELIVERY') {
+        createNotification(
+            io,
+            order.email, // Email del comprador guardado en la orden
+            `¡Buenas noticias! Tu pedido de la Orden #${order.id} está listo para entrega. Ve a tu perfil para coordinar el recibo.`,
+            'ENTREGA'
+        );
+    }
+
+    // CASO FINAL: El producto cambia a "DELIVERED" o "ENTREGADO" (Handshake completado)
+    if (normalizedStatus === 'DELIVERED' || normalizedStatus === 'ENTREGADO') {
         // Alerta al Comprador
         createNotification(
             io,
-            order.email, // El email del comprador guardado en la orden
+            order.email, 
             `Tu pedido de la Orden #${order.id} ha sido marcado como ENTREGADO. ¡No olvides dejar tu reseña sobre el producto!`,
             'ENTREGA'
         );
