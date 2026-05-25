@@ -2,9 +2,10 @@ const bcrypt = require('bcrypt');
 const users = new Map(); // El email será la llave única
 const products = [];     // Array para manejar la lista de productos
 const orders = [];       // Array para guardar los checkouts realizados
-const reviews = [];
+const reviews = [];      // Lista de reseñas
+const notifications = [];// Lista de notificaciones
+const chats = [];        // Lista de chats
 
-// 2. Generadores de IDs incrementales automáticos
 let productIdCounter = 1;
 let orderIdCounter = 1;
 
@@ -25,7 +26,7 @@ async function initData() {
         };
         
         users.set(admin.email.toLowerCase(), admin);
-        console.log("👑 Usuario Administrador inicializado y encriptado con éxito.");
+        console.log("👑 Usuario Administrador inicializado.");
 
         // Inicializar Productos de Prueba por Defecto
         const p1 = {
@@ -65,9 +66,12 @@ async function initData() {
             ownerEmail: "prueba@unisabana.edu.co"
         };
         products.push(p3);
+        // ... (Tu lógica de inicialización de productos se mantiene igual aquí)
+        // [He omitido el código de productos para brevedad, pero mantenlo igual en tu archivo]
 
     } catch (error) {
         console.error("Error al inicializar los datos en db:", error);
+        console.error("❌ Error inicializando los datos por defecto:", error);
     }
 }
 
@@ -83,4 +87,11 @@ module.exports = {
     // Helpers 
     generateNextProductId: () => productIdCounter++,
     generateNextOrderId: () => orderIdCounter++,
+    reviews,
+    notifications,
+    chats,
+    // Helpers 
+    generateNextProductId: () => productIdCounter++,
+    generateNextOrderId: () => orderIdCounter++,
+    initData
 };

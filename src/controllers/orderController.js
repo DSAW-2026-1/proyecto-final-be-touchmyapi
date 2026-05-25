@@ -1,9 +1,9 @@
-const { orders, products, generateNextOrderId } = require('../config/db');
+const { orders, products } = require('../config/db');
+const { createNotification } = require('./notificationController');
 
 const createOrder = (req, res) => {
     const { email, address, city, paymentMethod, totalAmount, items } = req.body;
 
-    // 1. Validar datos básicos obligatorios
     if (!email || !email.trim()) {
         return res.status(400).send("El email/contacto es obligatorio");
     }
@@ -11,93 +11,95 @@ const createOrder = (req, res) => {
         return res.status(400).send("El carrito no puede estar vacío");
     }
 
-    // Normalizar el email a minúsculas para evitar fallos de Case Sensitivity
     const normalizedEmail = email.toLowerCase().trim();
 
-    // 2. Primera pasada: Validar existencia de productos y disponibilidad de Stock
+    // Validar existencias
     for (const item of items) {
         if (!item.productId) {
             return res.status(400).send("Hay un producto en el carrito sin ID válido");
         }
-
-        // Buscar producto por ID en nuestro array global de memoria
         const product = products.find(p => p.id === Number(item.productId));
-
         if (!product) {
             return res.status(404).send(`El producto con ID ${item.productId} no existe.`);
         }
-
         if (product.stock < item.quantity) {
             return res.status(400).send(`Stock insuficiente para: ${product.title}. Disponible: ${product.stock}`);
         }
     }
 
-    // ✨ CORRECCIÓN AQUÍ: Guardamos el ownerEmail del producto dentro de la orden
-    const enrichedItems = items.map(item => {
-        const product = products.find(p => p.id === Number(item.productId));
-        return {
-            productId: Number(item.productId),
-            quantity: Number(item.quantity),
-            title: product.title,       
-            price: Number(product.price),
-            ownerEmail: product.ownerEmail // 👈 ¡Bolas! Esto era lo que faltaba
-        };
-    });
-
-    // 3. Segunda pasada: Si todo está perfecto, restamos el stock real del inventario
+    // Descontar Stock
     for (const item of items) {
         const product = products.find(p => p.id === Number(item.productId));
-        if (product) {
-            product.stock -= Number(item.quantity); // Resta el stock en memoria
-        }
+        product.stock -= item.quantity;
     }
 
-    // 4. Guardar la orden estructurada de manera impecable
+    const nextOrderId = orders.length > 0 ? Math.max(...orders.map(o => o.id)) + 1 : 1;
+
     const newOrder = {
-        id: generateNextOrderId(),
+        id: nextOrderId,
         email: normalizedEmail,
-        address: address || "",
-        city: city || "",
-        paymentMethod: paymentMethod || "",
-        totalAmount: Number(totalAmount) || 0.0,
+        address,
+        city,
+        paymentMethod,
+        totalAmount: Number(totalAmount),
         status: "PENDIENTE",
-        items: enrichedItems
+        items,
+        date: new Date().toISOString()
     };
 
     orders.push(newOrder);
 
-    // Retornamos la orden creada con estado Created
+    // LÓGICA DE DETONACIÓN DE NOTIFICACIONES (COMPRA Y VENTAS)
+    const io = req.app.get('io');
+
+    // A. Notificación para el Comprador
+    createNotification(
+        io,
+        normalizedEmail,
+        `¡Tu compra se ha procesado con éxito! Número de Orden asignado: #${nextOrderId}. Revisa los detalles en tu perfil.`,
+        'COMPRA'
+    );
+
+    // B. Notificación para los Vendedores (Evitando duplicar si un vendedor tiene varios artículos en el mismo carrito)
+    const uniqueSellers = [...new Set(items.map(item => item.ownerEmail?.toLowerCase().trim()))];
+    
+    uniqueSellers.forEach(sellerEmail => {
+        if (sellerEmail) {
+            // Obtenemos los ítems que son de este vendedor en esta orden específica
+            const itemsFromThisSeller = items.filter(item => item.ownerEmail?.toLowerCase().trim() === sellerEmail);
+            const totalItemsCount = itemsFromThisSeller.reduce((acc, curr) => acc + curr.quantity, 0);
+
+            createNotification(
+                io,
+                sellerEmail,
+                `¡Felicidades! Has vendido ${totalItemsCount} artículo(s) en la Orden #${nextOrderId}. Revisa tu panel de ventas para coordinar la entrega en el campus.`,
+                'VENTA'
+            );
+        }
+    });
+
     return res.status(201).json(newOrder);
 };
 
 const getOrdersByUser = (req, res) => {
     const { email } = req.params;
-    if (!email) {
-        return res.status(400).send("El email es requerido");
-    }
-    
+    if (!email) return res.status(400).send("El email es obligatorio");
+
     const normalizedEmail = email.toLowerCase().trim();
-    
-    
-    const userOrders = orders.filter(o => o.email && o.email.toLowerCase() === normalizedEmail);
-    
-    return res.json(userOrders);
+    const userOrders = orders.filter(o => o.email === normalizedEmail);
+    return res.status(200).json(userOrders);
 };
 
-const getSalesByOwner = (req, res) => {
+const getSalesBySeller = (req, res) => {
     const { email } = req.params;
     if (!email) {
         return res.status(400).send("El email del vendedor es requerido");
     }
 
     const normalizedEmail = email.toLowerCase().trim();
-    
-    // Filtramos las órdenes globales donde al menos un producto pertenezca al vendedor
     const sellerSales = [];
 
     orders.forEach(order => {
-        // Filtrar solo los ítems que le pertenecen a este vendedor
-       
         const myItems = order.items.filter(item => item.ownerEmail?.toLowerCase().trim() === normalizedEmail);
         
         if (myItems.length > 0) {
@@ -117,7 +119,6 @@ const getSalesByOwner = (req, res) => {
     return res.status(200).json(sellerSales);
 };
 
-// 2. Cambiar el estado de una orden a "ENTREGADO"
 const updateOrderStatus = (req, res) => {
     const { orderId } = req.params;
     const { status } = req.body; 
@@ -127,13 +128,40 @@ const updateOrderStatus = (req, res) => {
         return res.status(404).send("La orden no existe");
     }
 
-    order.status = status; 
+    order.status = status;
+
+    //Notificación cuando el producto cambia a "ENTREGADO"
+    if (status === 'ENTREGADO') {
+        const io = req.app.get('io');
+
+        // Alerta al Comprador
+        createNotification(
+            io,
+            order.email, // El email del comprador guardado en la orden
+            `Tu pedido de la Orden #${order.id} ha sido marcado como ENTREGADO. ¡No olvides dejar tu reseña sobre el producto!`,
+            'ENTREGA'
+        );
+
+        // Alerta a los Vendedores vinculados a esta orden
+        const uniqueSellers = [...new Set(order.items.map(item => item.ownerEmail?.toLowerCase().trim()))];
+        uniqueSellers.forEach(sellerEmail => {
+            if (sellerEmail) {
+                createNotification(
+                    io,
+                    sellerEmail,
+                    `Confirmado: Se completó la entrega de los productos relacionados a la Orden #${order.id}.`,
+                    'ENTREGA'
+                );
+            }
+        });
+    }
+
     return res.status(200).json(order);
 };
 
 module.exports = {
     createOrder,
     getOrdersByUser,
-    getSalesByOwner, 
+    getSalesBySeller,
     updateOrderStatus
 };

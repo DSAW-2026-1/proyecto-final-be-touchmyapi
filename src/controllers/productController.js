@@ -1,11 +1,11 @@
-const { products, users } = require('../config/db'); // 🌟 Extraemos solo lo que existe en tu db.js
+const { products, users } = require('../config/db'); 
+// Importar creador de notificaciones
+const { createNotification } = require('./notificationController');
 
-// 1. Obtener todos los productos 
 const getAllProducts = (req, res) => {
     return res.json(products);
 };
 
-// 2. Obtener productos de un dueño específico
 const getProductsByOwner = (req, res) => {
     const { email } = req.params;
     const normalizedEmail = email.toLowerCase().trim();
@@ -14,17 +14,14 @@ const getProductsByOwner = (req, res) => {
     return res.json(ownerProducts);
 };
 
-// 3. Crear un nuevo producto
 const createProduct = (req, res) => {
     const { title, description, price, stock, category, condition, imageUrl, ownerEmail } = req.body;
 
-    // Validación básica de campos obligatorios
     if (!title || !description || !price || !stock || !category || !condition || !ownerEmail) {
         return res.status(400).send("Faltan datos obligatorios.");
     }
 
     const normalizedEmail = ownerEmail.toLowerCase().trim();
-
     const nextId = products.length > 0 ? Math.max(...products.map(p => p.id)) + 1 : 1;
 
     const newProduct = {
@@ -32,31 +29,34 @@ const createProduct = (req, res) => {
         title,
         description: description || "",
         price: Number(price),
-        stock: stock !== undefined ? Number(stock) : 1, 
-        category: category,
-        condition: condition,
+        stock: Number(stock),
+        category,
+        condition,
         imageUrl: imageUrl || "",
         ownerEmail: normalizedEmail
     };
 
     products.push(newProduct);
 
-    // COMPOSICIÓN DE ROL SEGURA
     const user = users.get(normalizedEmail);
-    if (user) {
-        if (user.role === 'USER') {
-            user.role = 'SELLER';
-            users.set(normalizedEmail, user);
-            console.log(`🚀 Usuario ${normalizedEmail} promovido a SELLER por publicar.`);
-        }
-    } else {
-        console.warn(`⚠️ El dueño ${normalizedEmail} no figura en el mapa de usuarios.`);
+    if (user && user.role === 'USER') {
+        user.role = 'SELLER';
+        users.set(normalizedEmail, user);
+        console.log(`Usuario ${normalizedEmail} subió de rango a SELLER.`);
     }
+
+    // Notificación de producto publicado con éxito
+    const io = req.app.get('io');
+    createNotification(
+        io, 
+        normalizedEmail, 
+        `Tu producto "${title}" se ha publicado con éxito. ¡Ya está visible para todo el campus!`, 
+        'PRODUCTO_PUBLICADO'
+    );
 
     return res.status(201).json(newProduct);
 };
 
-// 4. Actualizar un producto existente
 const updateProduct = (req, res) => {
     const { id } = req.params;
     const { title, price, stock, category, description, imageUrl, condition } = req.body;
@@ -78,10 +78,8 @@ const updateProduct = (req, res) => {
     return res.json(product);
 };
 
-// 5. Eliminar un producto
 const deleteProduct = (req, res) => {
     const { id } = req.params;
-    
     const index = products.findIndex(p => p.id === Number(id));
 
     if (index === -1) {
@@ -89,21 +87,19 @@ const deleteProduct = (req, res) => {
     }
 
     const ownerEmail = products[index].ownerEmail?.toLowerCase().trim();
-
     products.splice(index, 1);
 
     if (ownerEmail) {
         const hasMoreProducts = products.some(p => p.ownerEmail && p.ownerEmail.toLowerCase() === ownerEmail);
-        
         const user = users.get(ownerEmail);
         if (user && user.role === 'SELLER' && !hasMoreProducts) {
             user.role = 'USER';
             users.set(ownerEmail, user);
-            console.log(`📉 Usuario ${ownerEmail} volvió a ser USER (sin publicaciones activas).`);
+            console.log(`Usuario ${ownerEmail} volvió a ser USER (sin publicaciones activas).`);
         }
     }
 
-    return res.status(200).send("Producto eliminado con éxito");
+    return res.status(200).send("Producto eliminado correctamente.");
 };
 
 module.exports = {

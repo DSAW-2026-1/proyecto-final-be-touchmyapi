@@ -1,9 +1,9 @@
 const { reviews, orders, users } = require('../config/db');
+const { createNotification } = require('./notificationController');
 
 const createReview = (req, res) => {
     const { productId, rating, comment, buyerEmail, sellerEmail } = req.body;
 
-    // Guardamos la reseña
     const newReview = {
         id: Date.now(),
         productId: Number(productId),
@@ -15,6 +15,18 @@ const createReview = (req, res) => {
     };
 
     reviews.push(newReview);
+
+    // Alerta para el vendedor de que recibió feedback público
+    if (sellerEmail) {
+        const io = req.app.get('io');
+        createNotification(
+            io,
+            sellerEmail.toLowerCase().trim(),
+            `Recibiste una nueva calificación de ${rating} estrellas por parte de un comprador. ¡Revisa tus comentarios!`,
+            'RESEÑA'
+        );
+    }
+
     res.status(201).json(newReview);
 };
 
