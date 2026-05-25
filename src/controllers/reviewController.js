@@ -54,5 +54,21 @@ const getSellerStats = (req, res) => {
         totalSales
     });
 };
+const deleteReview = (req, res) => {
+    const { reviewId } = req.params;
+    
+    // 1. Buscamos el índice exacto de la reseña usando su ID
+    const reviewIndex = reviews.findIndex(r => r.id === Number(reviewId));
 
-module.exports = { createReview, getProductReviews, getSellerStats };
+    // 2. Si no lo encuentra, retornamos error 404 de una
+    if (reviewIndex === -1) {
+        return res.status(404).send("La reseña no existe o ya fue eliminada.");
+    }
+
+    // 3. Modificamos el array original eliminando ese elemento específico con .splice()
+    reviews.splice(reviewIndex, 1);
+
+    return res.status(200).send("Reseña eliminada con éxito por el administrador.");
+};
+
+module.exports = { createReview, getProductReviews, getSellerStats, deleteReview };
