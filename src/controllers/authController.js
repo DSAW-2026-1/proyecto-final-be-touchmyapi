@@ -2,7 +2,8 @@ const { users } = require('../config/db');
 const { v4: uuidv4 } = require('uuid');
 const bcrypt = require('bcrypt');
 
-// 1. Agregamos 'async' aquí
+const { createNotification } = require('./notificationController');
+
 const register = async (req, res) => { 
     const { name, lastName, email, password, career, role } = req.body;
 
@@ -16,7 +17,6 @@ const register = async (req, res) => {
         return res.status(400).send("El usuario ya está registrado con ese correo.");
     }
     
-    // Ahora esto funcionará porque la función es async
     const hashedPassword = await bcrypt.hash(password, 10);
 
     const newUser = {
@@ -24,7 +24,7 @@ const register = async (req, res) => {
         name: name || "",
         lastName: lastName || "",
         email: normalizedEmail,
-        password: hashedPassword, // Guardamos el hash
+        password: hashedPassword, 
         career: career,
         role: role || "USER" 
     };
@@ -33,57 +33,84 @@ const register = async (req, res) => {
     return res.status(201).send("Usuario registrado con éxito");
 };
 
-// 2. Actualizamos el login para usar bcrypt.compare
 const login = async (req, res) => {
-    const { email, password } = req.body;
+    try {
+        const { email, password } = req.body;
 
-    if (!email || !password) {
-        return res.status(400).json({ message: "Credenciales incompletas" });
+        if (!email || !password) {
+            return res.status(400).send("El email y la contraseña son obligatorios.");
+        }
+
+        const normalizedEmail = email.toLowerCase().trim();
+
+        // 1. Buscar el usuario en el Map global de db.js
+        const user = users.get(normalizedEmail);
+        
+        if (!user) {
+            console.log(`[LOGIN FAILED] Usuario no encontrado: ${normalizedEmail}`);
+            return res.status(401).json({ message: "Credenciales incorrectas" });
+        }
+
+        // 2. Verificar la contraseña con bcrypt
+        const isMatch = await bcrypt.compare(password, user.password);
+        
+        if (!isMatch) {
+            console.log(`[LOGIN FAILED] Contraseña incorrecta para: ${normalizedEmail}`);
+            return res.status(401).json({ message: "Credenciales incorrectas" });
+        }
+
+        console.log(`[LOGIN SUCCESS] Ingresó: ${normalizedEmail} con rol: ${user.role}`);
+
+        // 3. ¡EL CAMBIO CRUCIAL!: Ponemos el 'return' para cortar la función aquí 
+        // y mandamos los datos como un objeto JSON
+        return res.status(200).json({
+            id: user.id,
+            name: user.name,
+            lastName: user.lastName,
+            email: user.email,
+            career: user.career,
+            role: user.role
+        });
+
+    } catch (error) {
+        console.error("Error en el login del servidor:", error);
+        return res.status(500).json({ message: "Error interno del servidor." });
     }
-
-    const normalizedEmail = email.toLowerCase().trim();
-    const user = users.get(normalizedEmail);
-
-    // Comparamos usando bcrypt
-    if (user && await bcrypt.compare(password, user.password)) {
-        return res.json(user);
-    }
-
-    return res.status(401).json({ message: "Credenciales incorrectas" });
 };
 
 const changePassword = async (req, res) => {
     try {
         const { email, currentPassword, newPassword } = req.body;
         
-        console.log("Datos recibidos para cambio de contraseña:", { email });
-        console.log("Usuarios actualmente en memoria:", Array.from(users.keys()));
-
-        // 1. Buscar usuario
         const user = users.get(email.toLowerCase().trim());
         if (!user) {
-            console.log("Usuario no encontrado en el Map:", email);
             return res.status(404).json({ message: "Usuario no encontrado" });
         }
 
-        // 2. Verificar la contraseña actual
         const isMatch = await bcrypt.compare(currentPassword, user.password);
-        console.log("¿La contraseña actual coincide?:", isMatch);
 
         if (!isMatch) {
             return res.status(401).json({ message: 'Contraseña actual incorrecta' });
         }
 
-        // 3. Hashear nueva y actualizar
         const hashedNewPassword = await bcrypt.hash(newPassword, 10);
         user.password = hashedNewPassword;
         
         users.set(user.email, user);
 
+        // Alerta de cambio de contraseña exitoso
+        const io = req.app.get('io');
+        createNotification(
+            io, 
+            user.email, 
+            "Tu contraseña ha sido actualizada con éxito. Si no realizaste esta acción, repórtalo de inmediato.", 
+            'PASSWORD'
+        );
+
         return res.status(200).json({ message: 'Contraseña actualizada con éxito' });
     } catch (error) {
         console.error("Error crítico en changePassword:", error);
-        res.status(500).json({ message: 'Error interno del servidor' });
+        res.status(500).json({ message: "Error interno del servidor" });
     }
 };
 

@@ -41,12 +41,17 @@ app.use('/api/v1/orders', require('./routes/orderRoutes'));
 app.use('/api/v1/reviews', require('./routes/reviewRoutes'));
 const chatRoutes = require('./routes/chatRoutes');
 app.use('/api/v1/chats', chatRoutes);
+app.use('/api/v1/notifications', require('./routes/notificationRoutes'));
+
+app.set('io', io);
 
 // 3. Ruta de Control de Salud de la API (Health Check)
-app.get('/api/v1/health', (req, res) => {
+app.get('/health', (req, res) => {
   res.json({ 
-    status: "up", 
-    message: "Servidor Express del Marketplace de La Sabana corriendo en memoria con WebSockets activos" 
+    status: "OK", 
+    microservice: "Marketplace-Unisabana-Backend", 
+    memoryDb: "Active",
+    socketsActive: "True" 
   });
 });
 
@@ -56,35 +61,43 @@ app.get('/api/v1/health', (req, res) => {
 io.on('connection', (socket) => {
   console.log(`[SOCKET] Estudiante conectado: ${socket.id}`);
 
-  // Evento para unirse a una sala única basada en el ID de la conversación
-  socket.on('join_room', (roomId) => {
-    socket.join(roomId);
-    console.log(`[SOCKET] Socket ${socket.id} entró a la sala: ${roomId}`);
+  // Registrar al estudiante en su sala personal usando su Email para Notificaciones en Vivo
+  socket.on('register_user', (email) => {
+    if (email) {
+      const normalizedEmail = email.toLowerCase().trim();
+      socket.join(normalizedEmail);
+      console.log(`[SOCKET] Estudiante registrado en su sala de notificaciones: ${normalizedEmail}`);
+    }
   });
 
-  // Evento para recibir un mensaje y retransmitirlo instantáneamente
-// Modifica el evento send_message para que retransmita el contexto completo si es necesario
-socket.on('send_message', (data) => {
-  const { roomId, productId, productTitle, productImage, buyerEmail, sellerEmail, senderEmail, text } = data;
+  //  Evento para unirse a una sala única basada en el ID de la conversación (Código de tu compañero)
+  socket.on('join_room', (roomId) => {
+    socket.join(roomId);
+    console.log(`[SOCKET] Socket ${socket.id} entró a la sala de chat: ${roomId}`);
+  });
 
-  const messagePayload = {
-    id: `msg_${Date.now()}`,
-    roomId,          // <-- Útil para que el front verifique la sala activa
-    productId,       // <-- Útil si el front necesita refrescar datos del producto
-    senderEmail,
-    text,
-    timestamp: new Date().toISOString()
-  };
+  // Evento para recibir un mensaje de chat y retransmitirlo instantáneamente
+  socket.on('send_message', (data) => {
+    const { roomId, productId, productTitle, productImage, buyerEmail, sellerEmail, senderEmail, text } = data;
 
-  io.to(roomId).emit('receive_message', messagePayload);
-});
+    const messagePayload = {
+      id: `msg_${Date.now()}`,
+      roomId,
+      productId,
+      senderEmail,
+      text,
+      timestamp: new Date().toISOString()
+    };
+
+    io.to(roomId).emit('receive_message', messagePayload);
+  });
 
   socket.on('disconnect', () => {
     console.log(`[SOCKET] Estudiante desconectado: ${socket.id}`);
   });
 });
 
-// 4. Encendido del Servidor usando 'server.listen' en lugar de 'app.listen'
+// Levantar el servidor HTTP global
 server.listen(PORT, () => {
-  console.log(`Servidor backend escuchando en el puerto ${PORT} (WebSockets Habilitados)`);
+  console.log(`Servidor corriendo en el puerto ${PORT}`);
 });

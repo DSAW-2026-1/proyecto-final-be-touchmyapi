@@ -3,6 +3,7 @@ const users = new Map(); // El email será la llave única
 const products = [];     // Array para manejar la lista de productos
 const orders = [];       // Array para guardar los checkouts realizados
 const reviews = [];
+const notifications = [];
 
 // 2. Generadores de IDs incrementales automáticos
 let productIdCounter = 1;
@@ -80,6 +81,7 @@ module.exports = {
     users,
     products,
     orders,
+    notifications,
     // Helpers 
     generateNextProductId: () => productIdCounter++,
     generateNextOrderId: () => orderIdCounter++,
