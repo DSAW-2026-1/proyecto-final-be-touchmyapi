@@ -1,4 +1,5 @@
 const { users, products } = require('../config/db');
+const bcrypt = require('bcrypt');
 
 // 1. Obtener todos los usuarios del sistema
 const getAllUsers = (req, res) => {
@@ -65,30 +66,37 @@ const toggleUserRole = (req, res) => {
     return res.json(user);
 };
 // 4. Restablecer contraseña de un usuario a la clave por defecto
-const resetUserPassword = (req, res) => {
-    const { email } = req.params;
-    const normalizedEmail = email.toLowerCase().trim();
+const resetUserPassword = async (req, res) => { // <-- Se le agrega async aquí
+    try {
+        const { email } = req.params;
+        const normalizedEmail = email.toLowerCase().trim();
 
-    if (normalizedEmail === 'jusselth@unisabana.edu.co') {
-        return res.status(403).send("¡Error! La contraseña del administrador principal está protegida y no puede ser restablecida.");
+        if (normalizedEmail === 'jusselth@unisabana.edu.co') {
+            return res.status(403).send("¡Error! La contraseña del administrador principal está protegida y no puede ser restablecida.");
+        }
+
+        const user = users.get(normalizedEmail);
+
+        if (!user) {
+            return res.status(404).send("Usuario no encontrado");
+        }
+
+        // NUEVO: Encriptamos el '12345678' antes de guardarlo en la base de datos
+        const hashedPassword = await bcrypt.hash('12345678', 10);
+        user.password = hashedPassword;
+        
+        // Guardamos los cambios en el Map en memoria
+        users.set(normalizedEmail, user);
+
+        return res.status(200).json({ 
+            message: "Contraseña restablecida correctamente", 
+            email: user.email
+        });
+        
+    } catch (error) {
+        console.error("Error al restablecer contraseña en backend:", error);
+        return res.status(500).json({ message: "Error interno al restablecer la contraseña" });
     }
-
-    const user = users.get(normalizedEmail);
-
-    if (!user) {
-        return res.status(404).send("Usuario no encontrado");
-    }
-
-    user.password = '12345678';
-    
-    // Guardamos los cambios en el Map en memoria
-    users.set(normalizedEmail, user);
-
-    return res.status(200).json({ 
-        message: "Contraseña restablecida correctamente", 
-        email: user.email,
-        newPassword: user.password 
-    });
 };
 
 module.exports = {
