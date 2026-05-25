@@ -32,14 +32,14 @@ const createOrder = (req, res) => {
         }
     }
 
-    // 🌟 NUEVO: Enriquecer los items con el Título y Precio real del producto antes de guardar
+    
     const enrichedItems = items.map(item => {
         const product = products.find(p => p.id === Number(item.productId));
         return {
             productId: Number(item.productId),
             quantity: Number(item.quantity),
-            title: product.title,       // 👈 Agregamos el título real
-            price: Number(product.price) // 👈 Agregamos el precio real
+            title: product.title,       
+            price: Number(product.price) 
         };
     });
 
@@ -59,7 +59,8 @@ const createOrder = (req, res) => {
         city: city || "",
         paymentMethod: paymentMethod || "",
         totalAmount: Number(totalAmount) || 0.0,
-        items: enrichedItems // 🌟 Guardamos los ítems con toda su información mapeada
+        status: "PENDIENTE",
+        items: enrichedItems
     };
 
     orders.push(newOrder);
@@ -76,13 +77,62 @@ const getOrdersByUser = (req, res) => {
     
     const normalizedEmail = email.toLowerCase().trim();
     
-    // 🌟 CORREGIDO: Aseguramos el filtrado estricto en minúsculas en el array global db
+    
     const userOrders = orders.filter(o => o.email && o.email.toLowerCase() === normalizedEmail);
     
     return res.json(userOrders);
 };
 
+const getSalesByOwner = (req, res) => {
+    const { email } = req.params;
+    if (!email) {
+        return res.status(400).send("El email del vendedor es requerido");
+    }
+
+    const normalizedEmail = email.toLowerCase().trim();
+    
+    // Filtramos las órdenes globales donde al menos un producto pertenezca al vendedor
+    const sellerSales = [];
+
+    orders.forEach(order => {
+        // Filtrar solo los ítems que le pertenecen a este vendedor
+       
+        const myItems = order.items.filter(item => item.ownerEmail?.toLowerCase().trim() === normalizedEmail);
+        
+        if (myItems.length > 0) {
+            sellerSales.push({
+                id: order.id,
+                buyerEmail: order.email,
+                address: order.address,
+                city: order.city,
+                paymentMethod: order.paymentMethod,
+                totalAmount: order.totalAmount, 
+                status: order.status || "PENDIENTE", 
+                items: myItems
+            });
+        }
+    });
+
+    return res.status(200).json(sellerSales);
+};
+
+// 2. Cambiar el estado de una orden a "ENTREGADO"
+const updateOrderStatus = (req, res) => {
+    const { orderId } = req.params;
+    const { status } = req.body; 
+
+    const order = orders.find(o => o.id === Number(orderId));
+    if (!order) {
+        return res.status(404).send("La orden no existe");
+    }
+
+    order.status = status; 
+    return res.status(200).json(order);
+};
+
 module.exports = {
     createOrder,
-    getOrdersByUser
+    getOrdersByUser,
+    getSalesByOwner, 
+    updateOrderStatus
 };

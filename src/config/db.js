@@ -52,6 +52,18 @@ async function initData() {
             ownerEmail: "prueba@unisabana.edu.co"
         };
         products.push(p2);
+        const p3 = {
+            id: productIdCounter++,
+            title: "Gomitas Trululú",
+            price: 12000,
+            stock: 3,
+            category: "FOOD",
+            condition: "NEW",
+            description: "Deliciosas gomitas para comer mientras comienza la clase.",
+            imageUrl: "https://http2.mlstatic.com/D_NQ_NP_875737-MCO95801924860_102025-O.webp",
+            ownerEmail: "prueba@unisabana.edu.co"
+        };
+        products.push(p3);
 
     } catch (error) {
         console.error("Error al inicializar los datos en db:", error);
