@@ -29,6 +29,7 @@ app.use('/api/v1/orders', require('./routes/orderRoutes'));
 app.use('/api/v1/reviews', require('./routes/reviewRoutes'));
 app.use('/api/v1/chats', require('./routes/chatRoutes'));
 app.use('/api/v1/notifications', require('./routes/notificationRoutes'));
+app.use('/api/v1/users', require('./routes/userRoutes'));
 
 // 3. Ruta de Control de Salud / Home
 app.get('/', (req, res) => {
