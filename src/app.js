@@ -13,15 +13,17 @@ const io = new Server(server, {
   cors: { origin: "*" }
 });
 
-app.use(cors()); 
-app.use(express.json());
+// 🚨 COMPARTIR SOCKET.IO CON LOS CONTROLADORES: Añade esta línea obligatoriamente
+app.set('io', io); 
+
+app.use(cors()); // En app.js, asegúrate de tener esto:
+app.use(express.json({ limit: '50mb' })); // Aumentamos límite por si acaso
 
 // Middlewares de log
 app.use((req, res, next) => {
     console.log(`[DEBUG] Recibida: ${req.method} ${req.url}`);
     next();
 });
-
 // Rutas
 app.use('/api/v1/auth', require('./routes/authRoutes'));
 app.use('/api/v1/products', require('./routes/productRoutes'));
